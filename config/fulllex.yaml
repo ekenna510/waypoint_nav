@@ -1,0 +1,49 @@
+waypoints:
+  - name: rotate
+    frame_id: map
+    pose:
+      position:
+        x: .21
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 1
+        w: 0
+  - name: couch
+    frame_id: map
+    pose:
+      position:
+        x: -1.0
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: -.7
+        w: .7
+  - name: gap
+    frame_id: map
+    pose:
+      position:
+        x: -1.2
+        y: -.9
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+
+trajectories:
+  - name: go_to_door
+    waypoints:
+    - rotate
+    - couch
+    - gap
+  - name: go_to_room2
+    waypoints:
+    - start2
+    - corner2
+    - room2

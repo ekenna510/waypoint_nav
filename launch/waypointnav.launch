@@ -1,0 +1,21 @@
+<!--
+  Starts the provider and loads the provided way pint & trajectory list
+  -->
+  
+<launch>
+  <arg name="filename" default="fulll.yaml" />
+  <arg name="frequency"     default="3.0"/>
+  <arg name="close_enough"  default="0.1"/>
+  <arg name="goal_timeout"  default="60.0"/>
+  
+  
+  <node pkg="waypoint_nav" name="waypointnav" type="waypointnav"  >
+    <param name="filename" value="$(find waypoint_nav)/config/$(arg filename)" />
+    <param name="frequency"    value="$(arg frequency)"/>
+    <param name="close_enough" value="$(arg close_enough)"/>
+    <param name="goal_timeout" value="$(arg goal_timeout)"/>
+    <param name="robot_frame" value="/base_footprint" />
+    <param name="world_frame" value="/map" /> 
+
+  </node>
+</launch>
