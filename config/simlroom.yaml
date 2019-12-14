@@ -1,0 +1,88 @@
+waypoints:
+  - name: rotate
+    frame_id: map
+    pose:
+      position:
+        x: .21
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 1
+        w: 0
+  - name: couch
+    frame_id: map
+    pose:
+      position:
+        x: -2.74
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: -.7
+        w: .7
+  - name: gap
+    frame_id: map
+    pose:
+      position:
+        x: -2.74
+        y: -2.8
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+  - name: bybigpc
+    frame_id: map
+    pose:
+      position:
+        x: -2.74
+        y: -2.99
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: -0.7
+        w: 0.7
+  - name: behindcouch
+    frame_id: map
+    pose:
+      position:
+        x: 0
+        y: -3.2
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+  - name: bydoor
+    frame_id: map
+    pose:
+      position:
+        x: 2.4
+        y: -3.3
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+
+trajectories:
+  - name: go_to_door
+    waypoints:
+    - rotate
+    - couch
+    - gap
+    - bybigpc
+    - behindcouch
+    - bydoor
+  - name: go_to_room2
+    waypoints:
+    - start2
+    - corner2
+    - room2
