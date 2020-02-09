@@ -3,7 +3,7 @@
   waypointnav::waypointnav(ros::NodeHandle* nodehandle):nh(*nodehandle),move_base_ac("move_base",true)
   {
     std::string filename;
-    ROS_INFO("z");
+    // ROS_INFO("z");
     if(!nh.param("/waypointnav/filename", filename,std::string("/home/robot/catkin_ws/src/waypoint_nav/config/example.yaml"))) {
       ROS_ERROR("Waypoint Provider : filename argument is not set");
     }
@@ -13,13 +13,13 @@
       ROS_ERROR("Waypointnav: failed");
     }
 
-    nh.param("frequency",      frequency,     1.0);
-    nh.param("close_enough",   close_enough,  0.3);  // close enough to next waypoint
-    nh.param("goal_timeout",   goal_timeout, 30.0);  // maximum time to reach a waypoint
-    nh.param("robot_frame",    robot_frame,    std::string("/base_footprint"));
-    nh.param("world_frame",    world_frame,    std::string("/map"));
+    nh.param("/waypointnav/frequency",      frequency,     1.0);
+    nh.param("/waypointnav/close_enough",   close_enough,  0.3);  // close enough to next waypoint
+    nh.param("/waypointnav/goal_timeout",   goal_timeout, 30.0);  // maximum time to reach a waypoint
+    nh.param("/waypointnav/robot_frame",    robot_frame,    std::string("base_footprint"));
+    nh.param("/waypointnav/world_frame",    world_frame,    std::string("map"));
 
-
+    ROS_INFO("goal_time %lf",goal_timeout);
 
   //  waypoints_pub = nh.advertise<waypoint_msgs::WaypointList>("waypoints", 5, true);
   //  trajectories_pub = nh.advertise<waypoint_msgs::TrajectoryList>("trajectories", 5, true);
@@ -45,12 +45,13 @@
 
     marker_index_ = 1000;
     label_index_ = 2000;
-
+    tf_listener_= new tf2_ros::TransformListener(tfBuffer);
+  
   }
 
   bool waypointnav::loadWaypointsAndTrajectoriesFromYaml(const std::string& filename)
   {
-    ROS_INFO("a");
+   // ROS_INFO("a");
 
     wps.waypoints.clear();
     trajs.trajectories.clear();
@@ -355,27 +356,27 @@
     mode_  = NONE;
   }
 
-  double waypointnav::distance2D(geometry_msgs::Pose a, geometry_msgs::Pose b)
-  {
-    return distance2D(a.position, b.position);
-  }
+//  double waypointnav::distance2D(geometry_msgs::Pose a, geometry_msgs::Pose b)
+//  {
+//    return distance2D(a.position, b.position);
+//  }
 
 
-  double waypointnav::distance2D(const tf::Transform& a, const tf::Transform& b)
-  {
-    return waypointnav::distance2D(a.getOrigin(), b.getOrigin());
-  }
+//  double waypointnav::distance2D(const tf::Transform& a, const tf::Transform& b)
+//  {
+//    return waypointnav::distance2D(a.getOrigin(), b.getOrigin());
+//  }
 
 
-  double waypointnav::distance2D(double x, double y)
-  {
-    return std::sqrt(std::pow(x, 2) + std::pow(y, 2));
-  }
+//  double waypointnav::distance2D(double x, double y)
+//  {
+//    return std::sqrt(std::pow(x, 2) + std::pow(y, 2));
+//  }
 
-  double waypointnav::distance2D(const tf::Point& p)
-  {
-    return std::sqrt(std::pow(p.x(), 2) + std::pow(p.y(), 2));
-  }
+//  double waypointnav::distance2D(const tf::Point& p)
+//  {
+//    return std::sqrt(std::pow(p.x(), 2) + std::pow(p.y(), 2));
+//  }
 
 
   double waypointnav::distance2D(double ax, double ay, double bx, double by)
@@ -383,21 +384,34 @@
     return std::sqrt(std::pow(ax - bx, 2) + std::pow(ay - by, 2));
   }
 
-  double waypointnav::distance2D(const tf::Point& p1, const tf::Point& p2)
+//  double waypointnav::distance2D(const tf::Point& p1, const tf::Point& p2)
+//  {
+//    return std::sqrt(std::pow(p2.x() - p1.x(), 2) + std::pow(p2.y() - p1.y(), 2));
+//  }
+
+//  double waypointnav::distance2D(geometry_msgs::Point a, geometry_msgs::Point b)
+//  {
+//    return distance2D(tf::Vector3(a.x, a.y, a.z), tf::Vector3(b.x, b.y, b.z));
+//  }
+
+  double waypointnav::calcDistanceToGoal(move_base_msgs::MoveBaseGoal mb_goal)
   {
-    return std::sqrt(std::pow(p2.x() - p1.x(), 2) + std::pow(p2.y() - p1.y(), 2));
+    geometry_msgs::TransformStamped robot_gb;
+
+
+    try
+      {
+      robot_gb = tfBuffer.lookupTransform(world_frame, robot_frame,ros::Time(0.0));
+      }
+    catch (tf2::TransformException& e)
+      {
+        ROS_WARN("Cannot get tf %s -> %s: %s", world_frame.c_str(), robot_frame.c_str(), e.what());
+      }
+    
+    double distance = distance2D(robot_gb.transform.translation.x,robot_gb.transform.translation.y,mb_goal.target_pose.pose.position.x,mb_goal.target_pose.pose.position.y);
+    return distance;
+
   }
-
-  double waypointnav::distance2D(geometry_msgs::Point a, geometry_msgs::Point b)
-  {
-    return distance2D(tf::Vector3(a.x, a.y, a.z), tf::Vector3(b.x, b.y, b.z));
-  }
-
-
-
-
-
-
 
   void waypointnav::spin()
   {
@@ -446,12 +460,17 @@
           mb_goal.target_pose.pose = traj.waypoints[i].pose;
   //        mb_goal.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);  // TODO use the heading from robot loc to next (front)
 
-          ROS_INFO("New goal: %.2f, %.2f, %.2f",
-                   mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
-                   tf::getYaw(mb_goal.target_pose.pose.orientation));
+          ROS_INFO("New goal: %.2f, %.2f, ",
+                   mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y
+                   //tf::getYaw(mb_goal.target_pose.pose.orientation)
+                   );
           move_base_ac.sendGoal(mb_goal);
 
+
+          distanceToGoal = calcDistanceToGoal(mb_goal);
+
   //        publishStatusUpdate(yocs_msgs::NavigationControlStatus::RUNNING);
+
 
           state_ = ACTIVE;
         }
@@ -482,6 +501,10 @@
       {
         actionlib::SimpleClientGoalState goal_state = move_base_ac.getState();
 
+       // actionlib::SimpleClientGoalState goal_state = move_base_ac.getResult
+
+       //move_base_msgs::MoveBaseResultConstPtr actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> const myresult;
+       //myresult = move_base_ac.getResult();
         // We are still pursuing a goal...
         if ((goal_state == actionlib::SimpleClientGoalState::ACTIVE) ||
             (goal_state == actionlib::SimpleClientGoalState::PENDING) ||
@@ -491,25 +514,45 @@
           // check if we timed out
           if ((ros::Time::now() - mb_goal.target_pose.header.stamp).toSec() >= goal_timeout)
           {
+
             ROS_WARN("Cannot reach goal after %.2f seconds; request a new one (current state is %s)",
                       goal_timeout, move_base_ac.getState().toString().c_str());
-            ROS_INFO("timeout at : %.2f, %.2f, %.2f",
-                     mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
-                     tf::getYaw(mb_goal.target_pose.pose.orientation));
-            if (i < (traj.waypoints.size() - 1))
+
+            ROS_INFO("timeout at : %.2f, %.2f,",
+                     mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y
+                     //tf::getYaw(mb_goal.target_pose.pose.orientation)
+                     );
+
+            double currentDistance =calcDistanceToGoal(mb_goal);
+            
+            // have we moved at least .1
+            if (distanceToGoal> currentDistance && distanceToGoal- currentDistance > .1 )
             {
-              ROS_INFO_STREAM("Requesting next way point.");
-              i++;
-              state_ = START;
+            // continue
+            // reset timer and distance to goal
+            mb_goal.target_pose.header.stamp= ros::Time::now();
+            distanceToGoal=currentDistance;
             }
             else
             {
-              ROS_INFO_STREAM("No more way points to go to.");
-              ROS_INFO("end at: %.2f, %.2f, %.2f",
-                       mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
-                       tf::getYaw(mb_goal.target_pose.pose.orientation));
-              state_ = COMPLETED;
+                //stuck
+              if (i < (traj.waypoints.size() - 1))
+              {
+                ROS_INFO("stuck distancetogoal %lf currentdistance %lf",distanceToGoal,currentDistance);
+                //i++;
+                //state_ = START;
+              }
+              else
+              {
+                ROS_INFO("No more way points to go to. end at: %.2f, %.2f,",
+                        mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y
+                        //tf::getYaw(mb_goal.target_pose.pose.orientation)
+                        );
+                state_ = COMPLETED;
+              }
+
             }
+            
           }
           // When close enough to current goal (except for the final one!), go for the
           // next waypoint, so we avoid the final slow approach and subgoal obsession
@@ -528,9 +571,10 @@
         {
           if (goal_state == actionlib::SimpleClientGoalState::SUCCEEDED)
           {
-            ROS_INFO("Go to goal successfully completed: %.2f, %.2f, %.2f",
-                     mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
-                     tf::getYaw(mb_goal.target_pose.pose.orientation));
+            ROS_INFO("Go to goal successfully completed: %.2f, %.2f ",
+                     mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y
+                     //tf::getYaw(mb_goal.target_pose.pose.orientation)
+                     );
             if (i < (traj.waypoints.size() - 1))
             {
               ROS_INFO_STREAM("Requesting next way point.");
@@ -546,11 +590,9 @@
           }
           else
           {
-            ROS_ERROR("Go to goal failed: %s.", move_base_ac.getState().toString().c_str());
-            ROS_INFO("Failed: %.2f, %.2f, %.2f",
-                     mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
-                     tf::getYaw(mb_goal.target_pose.pose.orientation));
-
+            ROS_ERROR("Go to goal failed: %s at  %.2f, %.2f  because %s", move_base_ac.getState().toString().c_str(),mb_goal.target_pose.pose.position.x, mb_goal.target_pose.pose.position.y,
+//                     tf::getYaw(mb_goal.target_pose.pose.orientation),
+                     goal_state.getText().c_str() );
             if (i < (traj.waypoints.size() - 1))
             {
               ROS_INFO_STREAM("Requesting next way point.");
@@ -595,28 +637,29 @@
 
 
     ros::NodeHandle nh; // create a node handle; need to pass this to the class constructor
-    ROS_INFO("Y");
+    //("Y");
 
-    ROS_INFO("main: instantiating an object of type waypointnav");
+    ROS_DEBUG("main: instantiating an object of type waypointnav");
     waypointnav waypointnav(&nh);  //instantiate an waypointnav object and pass in pointer to nodehandle for constructor to use
-    ROS_INFO("x");
+   // ROS_INFO("x");
     waypointnav.spin();
     return 0;
 
 
 
   }
-  void waypointnav::pose2tf(const geometry_msgs::Pose& pose, tf::Transform& tf)
-  {
-    tf.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(pose.orientation, q);
-    tf.setRotation(q);
-  }
+//  void waypointnav::pose2tf(const geometry_msgs::Pose& pose, tf::Transform& tf)
+//  {
+//    tf.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
+//    tf::Quaternion q;
+//    tf:quaternionMsgToTF(pose.orientation, q);
+//    tf.setRotation(q);
+//  }
 
-  void waypointnav::pose2tf(const geometry_msgs::PoseStamped& pose, tf::StampedTransform& tf)
-  {
-    tf.stamp_    = pose.header.stamp;
-    tf.frame_id_ = pose.header.frame_id;
-    pose2tf(pose.pose, tf);
-  }
+//  void waypointnav::pose2tf(const geometry_msgs::PoseStamped& pose, tf::StampedTransform& tf)
+//  {
+//    tf.stamp_    = pose.header.stamp;
+//    tf.frame_id_ = pose.header.frame_id;
+//   pose2tf(pose.pose, tf);
+//  }
+

@@ -18,8 +18,11 @@
   #include <move_base_msgs/MoveBaseAction.h>
   #include <actionlib/client/simple_action_client.h>
   #include <geometry_msgs/PointStamped.h>
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
+//#include <tf/tf.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+
+#include <geometry_msgs/TransformStamped.h>
 #include <turtlebot3_msgs/Sound.h>
 
 class waypointnav
@@ -44,16 +47,16 @@ protected:
                          const geometry_msgs::Pose wp_pose,
                          visualization_msgs::Marker& marker);
 
-void pose2tf(const geometry_msgs::Pose& pose, tf::Transform& tf);
-void pose2tf(const geometry_msgs::PoseStamped& pose, tf::StampedTransform& tf);
-double distance2D(const tf::Transform& a, const tf::Transform& b);
-double distance2D(double x, double y);
-double distance2D(const tf::Point& p);
-double distance2D(geometry_msgs::Pose a, geometry_msgs::Pose b);
+//void pose2tf(const geometry_msgs::Pose& pose, tf::Transform& tf);
+//void pose2tf(const geometry_msgs::PoseStamped& pose, tf::StampedTransform& tf);
+//double distance2D(const tf::Transform& a, const tf::Transform& b);
+//double distance2D(double x, double y);
+//double distance2D(const tf::Point& p);
+//double distance2D(geometry_msgs::Pose a, geometry_msgs::Pose b);
 
 double distance2D(double ax, double ay, double bx, double by);
-double distance2D(const tf::Point& p1, const tf::Point& p2);
-double distance2D(geometry_msgs::Point a, geometry_msgs::Point b);
+//double distance2D(const tf::Point& p1, const tf::Point& p2);
+//double distance2D(geometry_msgs::Point a, geometry_msgs::Point b);
 
 
 private:
@@ -86,7 +89,9 @@ private:
 
    bool cancelAllGoals(double timeout = 2.0);
    void resetWaypoints();
-   tf::TransformListener tf_listener_;
+   tf2_ros::Buffer tfBuffer;
+
+   tf2_ros::TransformListener *tf_listener_;
 
    ros::Publisher waypoints_pub, trajectories_pub;
    ros::Publisher waypoints_marker_pub, trajectory_marker_pub;
@@ -99,13 +104,15 @@ private:
   void parseTrajectories(const YAML::Node& node, const waypoint_msgs::WaypointList& wps, waypoint_msgs::TrajectoryList& trajs);
   //std::vector<geometry_msgs::PoseStamped>           waypoints_;
   //std::vector<geometry_msgs::PoseStamped>::iterator waypoints_it_;
-
+  double calcDistanceToGoal(move_base_msgs::MoveBaseGoal mb_goal);
+  
   turtlebot3_msgs::Sound sound_;
   waypoint_msgs::WaypointList waypoints_;
   waypoint_msgs::TrajectoryList trajectories_;
   visualization_msgs::MarkerArray waypoint_markers_, trajectory_markers_;
   int marker_index_;
   int label_index_;
+  double distanceToGoal;
 };
 
 #endif // WAYPOINTNAV_H
