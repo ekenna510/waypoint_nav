@@ -35,8 +35,10 @@
 
   class WaypointProvider {
     public:
-      WaypointProvider(ros::NodeHandle* n, waypoint_msgs::WaypointList& wps, waypoint_msgs::TrajectoryList& trajs);
+      WaypointProvider(ros::NodeHandle* n);
       ~WaypointProvider();
+      bool loadWaypointsAndTrajectoriesFromYaml(const std::string& filename);
+
 
       void spin();
     protected:
@@ -54,6 +56,11 @@
                              const std::string wp_name,
                              const geometry_msgs::Pose wp_pose,
                              visualization_msgs::Marker& marker);
+      void getYamlNode(const std::string& filename, YAML::Node& node);
+      void parseWaypoints(const YAML::Node& node, waypoint_msgs::WaypointList& wps);
+      void parseTrajectories(const YAML::Node& node,
+                       const waypoint_msgs::WaypointList& wps,
+                       waypoint_msgs::TrajectoryList& trajs);
 
     private:
       bool initialized_;

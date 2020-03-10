@@ -162,7 +162,9 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 #add_executable(waypoint_provider src/waypoint_provider.cpp src/yaml_parser.cpp)
+add_executable(waypoint_provider src/waypoint_provider.cpp )
 add_executable(waypointnav src/waypointnav.cpp )
+add_executable(testprovider src/testprovider.cpp )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -179,7 +181,10 @@ add_dependencies(waypointnav ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
+target_link_libraries(waypoint_provider ${catkin_LIBRARIES} yaml-cpp)
 target_link_libraries(waypointnav ${catkin_LIBRARIES} yaml-cpp)
+target_link_libraries(testprovider ${catkin_LIBRARIES})
 
 #############
 ## Install ##
