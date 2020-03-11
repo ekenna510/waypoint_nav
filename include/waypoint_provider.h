@@ -19,6 +19,7 @@
 #include "Trajectory.h"
 #include "TrajectoryList.h"
 #include "WaypointListService.h"
+#include "TrajectoryService.h"
 #include "WaypointList.h"
 #include <fstream>
 #include "ros/ros.h"
@@ -45,6 +46,8 @@
       void init();
       bool processWaypointsService(waypoint_msgs::WaypointListService::Request& request,
                                    waypoint_msgs::WaypointListService::Response& response);
+      bool processTrajectoryService(waypoint_msgs::TrajectoryService::Request& request,
+                                   waypoint_msgs::TrajectoryService::Response& respond  );                                   
       void generateWaypointMarkers(const waypoint_msgs::WaypointList& wps, visualization_msgs::MarkerArray& wp_markers);
       void generateTrajectoryMarkers(const waypoint_msgs::TrajectoryList& trajs,
                                      visualization_msgs::MarkerArray& traj_markers);
@@ -68,10 +71,16 @@
       ros::Publisher waypoints_pub_, trajectories_pub_;
       ros::Publisher waypoints_marker_pub_, trajectory_marker_pub_;
       ros::ServiceServer waypoints_srv_;
+      ros::ServiceServer trajectories_srv_;
 
       waypoint_msgs::WaypointList waypoints_;
       waypoint_msgs::TrajectoryList trajectories_;
       visualization_msgs::MarkerArray waypoint_markers_, trajectory_markers_;
+
+      std::string currentTrajectory;
+      int currentTrajectoryID=-1;
+      std::string currentWaypoint;
+      int currentWaypointID = -1;
 
       int marker_index_;
       int label_index_;

@@ -28,7 +28,7 @@
     trajectory_marker_pub_ = nh_->advertise<visualization_msgs::MarkerArray>("trajectory_markers", 5, true);
     // setup srv server
     waypoints_srv_ = nh_->advertiseService("request_waypoints", &WaypointProvider::processWaypointsService, this);
-
+    trajectories_srv_ = nh_->advertiseService("request_trajectory", &WaypointProvider::processTrajectoryService, this);
 
     //waypoints_ = waypoints_;
     //trajectories_ = trajectories_;
@@ -57,6 +57,114 @@
     return true;
   }
 
+  bool WaypointProvider::processTrajectoryService(waypoint_msgs::TrajectoryService::Request& request,
+  waypoint_msgs::TrajectoryService::Response& response  )
+  {
+    ROS_INFO("Trajectory Manager : Received request");
+    if(initialized_) // return false if node is not initialized with points
+    {
+    if ( currentTrajectoryID < 0 || request.trajectoryname != currentTrajectory)
+      {
+        currentTrajectoryID = -1;
+        ROS_INFO("size %ld", trajectories_.trajectories.size());
+        for (int i=0; i <= trajectories_.trajectories.size(); i++ )
+        {
+          ROS_DEBUG("name %d %s",i,trajectories_.trajectories[i].name.c_str());
+            if (trajectories_.trajectories[i].name == request.trajectoryname)
+              {
+               ROS_INFO("Trajectory Manager : New Trajectory %s found",trajectories_.trajectories[i].name.c_str());
+              currentTrajectory = request.trajectoryname;
+              currentTrajectoryID = i;
+              currentWaypointID = -1;
+              break;
+              }
+        }
+      }
+    else
+      {
+      ROS_INFO("Trajectory Manager : using Trajectory %s",trajectories_.trajectories[currentTrajectoryID].name.c_str());
+      }
+    
+    if ( currentTrajectoryID > -1 )
+    {
+      ROS_DEBUG("lastwaypoint requested %s",request.lastwaypoint.c_str());
+      // if no waypoint name supplied advance to next waypoint
+      if (request.lastwaypoint.empty())
+        {
+        currentWaypointID++;
+        ROS_DEBUG("Empty waypoint getting next waypoint %d",currentWaypointID);
+
+        response.success = true;
+        }
+      else
+        {
+        
+        if (currentWaypointID > -1 && trajectories_.trajectories[currentTrajectoryID].waypoints[currentWaypointID].name == request.lastwaypoint  )
+          {
+            ROS_DEBUG("current waypointid matched %s going to next waypoint",request.lastwaypoint.c_str());
+            currentWaypointID++;
+            response.success = true;
+          }
+        else
+          {
+          int i;
+          // search for the last waypoint
+          for (i=0;i<trajectories_.trajectories[currentTrajectoryID].waypoints.size();i++)
+            {
+            if (trajectories_.trajectories[currentTrajectoryID].waypoints[i].name == request.lastwaypoint )
+              {
+              ROS_DEBUG("found  %s going to next waypoint",request.lastwaypoint.c_str());
+              currentWaypointID= i+1;
+              response.success = true;
+              break;
+              }
+            }
+          if ( i ==trajectories_.trajectories[currentTrajectoryID].waypoints.size()  )
+            {
+            ROS_WARN("Could not find the last waypoint %s",request.lastwaypoint.c_str());
+            response.success = false;
+            }
+          }
+        }
+
+        if (currentWaypointID < trajectories_.trajectories[currentTrajectoryID].waypoints.size() && response.success )
+          {
+          // default to false
+          response.endoftrajectory = false;
+          ROS_DEBUG("currentWaypointID %d",currentWaypointID);
+          response.waypoint = trajectories_.trajectories[currentTrajectoryID].waypoints[currentWaypointID];
+          if (currentWaypointID ==trajectories_.trajectories[currentTrajectoryID].waypoints.size()-1)
+            {
+              // we are at the end
+              ROS_INFO("At the last waypoint %d, ",currentWaypointID);
+              response.endoftrajectory = true;
+            }
+
+          }
+        else
+        {
+          ROS_WARN("Trying to go beyond the last waypoint");
+          response.success = false;
+
+        }
+        
+
+    }
+    else
+    {
+      ROS_WARN("Trajectory Manager : Trajestory %s not found",request.trajectoryname.c_str());
+      response.success = false;
+    }
+
+
+    }
+    else {
+      ROS_WARN("Trajectory Manager : Not initialized");
+      response.success = false;
+    }
+    return true;
+
+  }
   void WaypointProvider::generateWaypointMarkers(const waypoint_msgs::WaypointList& waypoints_,
                                                  visualization_msgs::MarkerArray& wp_viz)
   {
@@ -177,10 +285,12 @@
 
 bool WaypointProvider::loadWaypointsAndTrajectoriesFromYaml(const std::string& filename)
 {
-  ROS_INFO("a");
 
   waypoints_.waypoints.clear();
   trajectories_.trajectories.clear();
+  currentTrajectoryID=-1;
+  currentWaypointID=-1;
+
 
   // Yaml File Parsing
   try
@@ -281,6 +391,7 @@ void WaypointProvider::parseTrajectories(const YAML::Node& node,
   const YAML::Node* wp_node = wp_node_tmp ? &wp_node_tmp : NULL;
   if(wp_node != NULL)
   {
+    ROS_DEBUG("wp-node size %ld",wp_node->size());
     for(i = 0; i < wp_node->size(); ++i)
     {
       // Parse trajectory entries on YAML
@@ -305,6 +416,7 @@ void WaypointProvider::parseTrajectories(const YAML::Node& node,
         }
         if (!wp_found)
         {
+          ROS_INFO("wp-node %s notfound ",wp_name.c_str());          
           all_waypoints_found = false;
           break;
         }
@@ -314,6 +426,12 @@ void WaypointProvider::parseTrajectories(const YAML::Node& node,
         traj.name= (*wp_node)[i]["name"].as<std::string>(); // >> traj.name;
         trajectories_.trajectories.push_back(traj);
       }
+      else
+      {
+        ROS_WARN("Trajectory %s could not be loaded missing waypoints",traj.name.c_str());
+      }
+      
+      ROS_DEBUG("wp-node i %d",i);
     }
     ROS_INFO_STREAM("Parsed " << trajectories_.trajectories.size() << " trajectories.");
   }

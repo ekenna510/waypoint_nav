@@ -7,7 +7,7 @@
   <arg name="runtest"     default="true"/>
   
   
-  <node pkg="waypoint_nav" name="waypoint_provider" type="waypoint_provider"  >
+  <node pkg="waypoint_nav" name="waypoint_provider" type="waypoint_provider"  output="screen" >
     <param name="filename" value="$(find waypoint_nav)/config/$(arg filename)" />
   </node>
   <group if="$(arg runtest)">

@@ -96,6 +96,6 @@ trajectories:
     - bystairs
   - name: go_to_room2
     waypoints:
-    - start2
-    - corner2
-    - room2
+    - couch
+    - behindcouch
+    - bystairs
